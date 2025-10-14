@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "apollo.fullname" . }}-controller-manager
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "apollo.labels" . | nindent 4 }}
+    control-plane: controller-manager
+    app.kubernetes.io/component: manager
+spec:
+  replicas: {{ .Values.operator.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "apollo.selectorLabels" . | nindent 6 }}
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        {{- include "apollo.selectorLabels" . | nindent 8 }}
+        control-plane: controller-manager
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "apollo.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+      - name: manager
+        command:
+        - /manager
+        args:
+        - --leader-elect
+        - --health-probe-bind-address=:8081
+        image: "{{ .Values.operator.image.repository }}:{{ .Values.operator.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
+        ports:
+        - name: webhook-server
+          containerPort: 9443
+          protocol: TCP
+        - name: api
+          containerPort: {{ .Values.api.port }}
+          protocol: TCP
+        securityContext:
+          {{- toYaml .Values.containerSecurityContext | nindent 10 }}
+        livenessProbe:
+          {{- toYaml .Values.operator.healthProbes.liveness | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.operator.healthProbes.readiness | nindent 10 }}
+        resources:
+          {{- toYaml .Values.operator.resources | nindent 10 }}
+      terminationGracePeriodSeconds: 10
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

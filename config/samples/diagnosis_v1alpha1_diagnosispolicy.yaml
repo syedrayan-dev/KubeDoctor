@@ -1,0 +1,9 @@
+apiVersion: diagnosis.apollo.dev/v1alpha1
+kind: DiagnosisPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: apollo
+    app.kubernetes.io/managed-by: kustomize
+  name: diagnosispolicy-sample
+spec:
+  # TODO(user): Add fields here

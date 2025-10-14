@@ -1,0 +1,22 @@
+🚀 Apollo Kubernetes Operator has been installed!
+
+{{- if .Values.global.createNamespace }}
+📁 Namespace '{{ .Values.global.namespace }}' has been created automatically.
+{{- end }}
+
+📊 Dashboard Access:
+{{- if .Values.webui.enabled }}
+  📍 Access Web UI via port-forward:
+  kubectl --namespace {{ .Values.global.namespace }} port-forward svc/{{ include "apollo.fullname" . }}-webui 8080:{{ .Values.webui.service.port }}
+  echo "🌐 Visit http://127.0.0.1:8080"
+{{- else }}
+  ℹ️  Web UI is disabled. Enable it by setting webui.enabled=true
+{{- end }}
+
+🔍 Check Operator Status:
+  kubectl --namespace {{ .Values.global.namespace }} get pods -l app.kubernetes.io/component=manager
+
+📋 View CRDs:
+  kubectl get crds | grep diagnosis.apollo.dev
+
+📖 For more information, visit: https://github.com/yth01/apollo

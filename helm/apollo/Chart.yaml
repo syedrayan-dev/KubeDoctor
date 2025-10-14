@@ -1,0 +1,19 @@
+apiVersion: v2
+name: apollo
+description: A Kubernetes operator for LLM-powered pod diagnosis and troubleshooting
+type: application
+version: 0.1.0
+appVersion: "v0.1.0"
+home: https://github.com/yth01/apollo
+sources:
+  - https://github.com/yth01/apollo
+maintainers:
+  - name: yth01
+    email: yth011026@gmail.com
+keywords:
+  - kubernetes
+  - operator
+  - diagnosis
+  - troubleshooting
+  - llm
+  - ai

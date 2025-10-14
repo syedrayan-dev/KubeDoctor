@@ -1,0 +1,299 @@
+{{- if .Values.crds.install }}
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+    {{- include "apollo.annotations" . | nindent 4 }}
+  name: diagnosispolicies.diagnosis.apollo.dev
+  labels:
+    {{- include "apollo.labels" . | nindent 4 }}
+spec:
+  group: diagnosis.apollo.dev
+  names:
+    kind: DiagnosisPolicy
+    listKind: DiagnosisPolicyList
+    plural: diagnosispolicies
+    singular: diagnosispolicy
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: DiagnosisPolicy is the Schema for the diagnosispolicies API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DiagnosisPolicySpec defines the desired state of DiagnosisPolicy.
+            properties:
+              diagnosisSettings:
+                description: DiagnosisSettings controls diagnosis behavior
+                properties:
+                  maxLogLines:
+                    default: 100
+                    description: MaxLogLines specifies maximum number of log lines
+                      to collect for analysis
+                    type: integer
+                  retryInterval:
+                    default: 5m
+                    description: RetryInterval specifies how long to wait before retrying
+                      diagnosis for the same pod
+                    type: string
+                type: object
+              llmConfig:
+                description: LLMConfig specifies the LLM configuration for analysis
+                properties:
+                  apiKeySecretRef:
+                    description: |-
+                      APIKeySecretRef references a secret containing the API key
+                      Required for providers like OpenAI, optional for self-hosted providers like Ollama
+                    properties:
+                      key:
+                        description: Key in the secret containing the API key
+                        type: string
+                      name:
+                        description: Name of the secret
+                        type: string
+                      namespace:
+                        description: Namespace of the secret (if different from policy
+                          namespace)
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  baseURL:
+                    description: |-
+                      BaseURL specifies custom API base URL (optional for custom deployments)
+                      For Ollama, this would be the Ollama server URL (e.g., "http://ollama-service:11434")
+                    type: string
+                  model:
+                    description: Model specifies the LLM model to use (e.g., "gpt-4",
+                      "llama3.2", "mistral")
+                    type: string
+                  provider:
+                    description: Provider specifies the LLM provider (e.g., "openai",
+                      "ollama", "azure-openai")
+                    type: string
+                required:
+                - model
+                - provider
+                type: object
+              podSelector:
+                description: |-
+                  PodSelector selects the pods this policy applies to.
+                  If not specified, applies to all pods in the target namespaces.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              targetNamespaces:
+                description: |-
+                  TargetNamespaces specifies the namespaces this policy applies to.
+                  If not specified, applies to the same namespace as the policy.
+                items:
+                  type: string
+                type: array
+              triggerConditions:
+                description: TriggerConditions defines which pod conditions trigger
+                  diagnosis
+                items:
+                  description: PodConditionTrigger defines conditions that trigger
+                    diagnosis based on Pod Phase and Conditions
+                  properties:
+                    conditions:
+                      description: |-
+                        Conditions specifies additional pod conditions to check (required when Type is "Running")
+                        This allows fine-grained detection based on Pod Conditions like Ready, ContainersReady, etc.
+                      items:
+                        description: PodConditionCheck defines a specific pod condition
+                          to verify
+                        properties:
+                          minDuration:
+                            description: MinDuration for this specific condition (overrides
+                              parent minDuration if specified)
+                            type: string
+                          name:
+                            description: Name of the pod condition
+                            enum:
+                            - Ready
+                            - ContainersReady
+                            - PodScheduled
+                            - Initialized
+                            - PodReadyToStartContainers
+                            - DisruptionTarget
+                            type: string
+                          status:
+                            description: Status expected for the condition to trigger
+                              diagnosis
+                            enum:
+                            - "True"
+                            - "False"
+                            - Unknown
+                            type: string
+                        required:
+                        - name
+                        - status
+                        type: object
+                      type: array
+                    minDuration:
+                      description: MinDuration specifies minimum duration the condition
+                        must persist before triggering
+                      type: string
+                    type:
+                      description: |-
+                        Type specifies the pod phase that triggers diagnosis
+                        Valid values: "Failed", "Pending", "Unknown", "Running"
+                      enum:
+                      - Failed
+                      - Pending
+                      - Unknown
+                      - Running
+                      type: string
+                  required:
+                  - type
+                  type: object
+                type: array
+            required:
+            - llmConfig
+            - triggerConditions
+            type: object
+          status:
+            description: DiagnosisPolicyStatus defines the observed state of DiagnosisPolicy.
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the policy's current state
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              lastDiagnosisTime:
+                description: LastDiagnosisTime is the last time a diagnosis was triggered
+                  by this policy
+                format: date-time
+                type: string
+              observedGeneration:
+                description: ObservedGeneration reflects the generation of the most
+                  recently observed DiagnosisPolicy.
+                format: int64
+                type: integer
+              totalDiagnosisCount:
+                description: TotalDiagnosisCount is the total number of diagnoses
+                  triggered by this policy
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+{{- end }}

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pending-imagepull-demo-pod
+  namespace: apollo-demo
+  labels:
+    demo: apollo
+spec:
+  restartPolicy: Always
+  containers:
+  - name: failing-container
+    image: nonexistent-registry.io/nonexistent-image:latest
+    imagePullPolicy: Always
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"

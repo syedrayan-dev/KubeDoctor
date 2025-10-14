@@ -1,0 +1,127 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_OPERATOR: ${{ github.repository }}/operator
+  IMAGE_NAME_WEBUI: ${{ github.repository }}/webui
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      operator-image: ${{ steps.meta-operator.outputs.tags }}
+      webui-image: ${{ steps.meta-webui.outputs.tags }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata for operator
+      id: meta-operator
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_OPERATOR }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push operator image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.meta-operator.outputs.tags }}
+        labels: ${{ steps.meta-operator.outputs.labels }}
+
+    - name: Extract metadata for webui
+      id: meta-webui
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WEBUI }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push webui image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./web
+        file: ./web/Dockerfile
+        push: true
+        tags: ${{ steps.meta-webui.outputs.tags }}
+        labels: ${{ steps.meta-webui.outputs.labels }}
+
+  release-helm-chart:
+    needs: build-images
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: '3.14.0'
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        with:
+          charts_dir: helm
+
+      - name: Update README on gh-pages
+        run: |
+          # Switch to gh-pages branch and pull latest changes
+          git checkout gh-pages
+          git pull origin gh-pages
+          
+          # Copy README, docs, and index.html from main branch
+          git checkout main -- README.md
+          git checkout main -- docs/
+          git checkout main -- index.html
+          
+          # Commit and push if there are changes
+          git add README.md docs/ index.html
+          if git diff --staged --quiet; then
+            echo "No changes to README or docs"
+          else
+            git commit -m "Update README and docs from main branch"
+            git push origin gh-pages
+          fi

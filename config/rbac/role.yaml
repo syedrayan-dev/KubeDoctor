@@ -1,0 +1,79 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  - secrets
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - pods/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - diagnosis.apollo.dev
+  resources:
+  - diagnosispolicies
+  - diagnosisreports
+  - diagnosisrequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - diagnosis.apollo.dev
+  resources:
+  - diagnosispolicies/finalizers
+  - diagnosisreports/finalizers
+  - diagnosisrequests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - diagnosis.apollo.dev
+  resources:
+  - diagnosispolicies/status
+  - diagnosisreports/status
+  - diagnosisrequests/status
+  verbs:
+  - get
+  - patch
+  - update

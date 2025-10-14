@@ -1,0 +1,25 @@
+apiVersion: diagnosis.apollo.dev/v1alpha1
+kind: DiagnosisPolicy
+metadata:
+  name: demo-comprehensive-policy
+  namespace: apollo-demo
+spec:
+  targetNamespaces:
+  - apollo-demo
+  
+  triggerConditions:
+  - type: Failed
+
+  - type: Pending
+    minDuration: 30s
+
+  - type: Running
+    conditions:
+    - name: Ready
+      status: "False"
+      minDuration: 1m
+  
+  llmConfig:
+    provider: ollama
+    model: llama3.2
+    baseURL: "http://localhost:11434"

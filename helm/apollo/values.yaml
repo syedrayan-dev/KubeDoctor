@@ -1,0 +1,97 @@
+global:
+  namespace: apollo-system
+  createNamespace: true
+  imagePullSecrets: []
+
+operator:
+  image:
+    repository: ghcr.io/yth01/apollo/operator
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+  healthProbes:
+    liveness:
+      httpGet:
+        path: /healthz
+        port: 8081
+      initialDelaySeconds: 15
+      periodSeconds: 20
+    readiness:
+      httpGet:
+        path: /readyz
+        port: 8081
+      initialDelaySeconds: 5
+      periodSeconds: 10
+
+webui:
+  enabled: true
+  image:
+    repository: ghcr.io/yth01/apollo/webui
+    tag: "latest"
+    pullPolicy: Always
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+  healthProbes:
+    liveness:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  automountToken: true
+
+rbac:
+  create: true
+
+crds:
+  install: true
+
+api:
+  port: 8080
+
+securityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - "ALL"
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

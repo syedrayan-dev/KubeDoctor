@@ -1,0 +1,6 @@
+## Append samples of your project ##
+resources:
+- diagnosis_v1alpha1_diagnosispolicy.yaml
+- diagnosis_v1alpha1_diagnosisreport.yaml
+- diagnosis_v1alpha1_diagnosisrequest.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
